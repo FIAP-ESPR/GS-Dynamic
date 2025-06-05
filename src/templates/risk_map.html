@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Risco de Incêndio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <!-- Leaflet Heat CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-fire-alt me-2"></i>
+                Sistema de Monitorização de Risco de Incêndio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+<ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Início</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/risk/map">Mapa de Risco</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/risk/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/emergency">Gestão de Emergências</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/#about">Sobre</a>
+                    </li>
+                </ul>   
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <h1>Mapa de Risco de Incêndio</h1>
+                <p class="lead">Selecione uma região no mapa para analisar o risco de incêndio florestal.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active" id="viewRiskMap">
+                        <i class="fas fa-map-marker-alt me-2"></i>Mapa de Risco
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" id="viewHeatMap">
+                        <i class="fas fa-fire me-2"></i>Mapa de Calor
+                    </button>
+                </div>
+                <button type="button" class="btn btn-outline-secondary ms-2" id="helpDrawButton">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body p-0">
+                        <div id="map" class="map-container"></div>
+                    </div>
+                </div>
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Para selecionar uma região, clique no botão de desenho <i class="fas fa-square"></i> no canto superior esquerdo do mapa e depois clique e arraste para criar um retângulo.
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Detalhes da Região</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="regionDetails">
+                            <p class="text-muted text-center my-4">Selecione uma região no mapa para ver os detalhes.</p>
+                        </div>
+                        <div id="loadingIndicator" class="text-center d-none">
+                            <div class="loader"></div>
+                            <p>A calcular risco de incêndio...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Legenda de Risco</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="risk-indicator risk-very-low">Muito Baixo</span>
+                            <span>0-20</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="risk-indicator risk-low">Baixo</span>
+                            <span>21-40</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="risk-indicator risk-moderate">Moderado</span>
+                            <span>41-60</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="risk-indicator risk-high">Alto</span>
+                            <span>61-80</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="risk-indicator risk-very-high">Muito Alto</span>
+                            <span>81-100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ajuda para Desenho -->
+    <div class="modal fade" id="drawHelpModal" tabindex="-1" aria-labelledby="drawHelpModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="drawHelpModalLabel">Como Selecionar uma Região</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <ol>
+                        <li>Clique no botão de desenho <i class="fas fa-square"></i> no canto superior esquerdo do mapa.</li>
+                        <li>Clique em qualquer ponto do mapa para começar a desenhar um retângulo.</li>
+                        <li>Arraste o cursor para definir o tamanho e a forma do retângulo.</li>
+                        <li>Solte o botão do mouse para finalizar o desenho.</li>
+                        <li>O sistema calculará automaticamente o risco de incêndio para a região selecionada.</li>
+                    </ol>
+                    <p>Você também pode:</p>
+                    <ul>
+                        <li>Editar o retângulo clicando no botão de edição <i class="fas fa-edit"></i>.</li>
+                        <li>Excluir o retângulo clicando no botão de exclusão <i class="fas fa-trash"></i>.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Sistema de Monitorização de Risco de Incêndio</h5>
+                    <p>Uma ferramenta para prevenção e monitorização de incêndios florestais.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>&copy; 2025 Sistema de Monitorização de Risco de Incêndio</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <!-- Leaflet Draw JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <!-- Leaflet Heat JS -->
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+</body>
+</html>

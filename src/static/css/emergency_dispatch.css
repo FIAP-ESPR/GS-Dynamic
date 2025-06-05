@@ -1,0 +1,106 @@
+/* Estilos personalizados para o sistema de despacho de emergências */
+
+/* Estilos para a árvore de regiões */
+.region-tree {
+    padding: 10px;
+    overflow: auto;
+    max-height: 300px;
+}
+
+.tree-node {
+    margin-bottom: 5px;
+}
+
+.tree-node-header {
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tree-node-children {
+    margin-left: 20px;
+    padding-left: 10px;
+    border-left: 2px solid #dee2e6;
+    margin-top: 5px;
+}
+
+/* Estilos para o mapa */
+.map-container {
+    height: 300px;
+    border-radius: 0 0 5px 5px;
+}
+
+/* Estilos para os cards do dashboard */
+.dashboard-card {
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card .card-header {
+    font-weight: 500;
+}
+
+/* Estilos para tabelas */
+.table th {
+    background-color: #f8f9fa;
+}
+
+/* Estilos para visualização do grafo */
+#graphVisualization {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+#graphVisualization line {
+    stroke-opacity: 0.6;
+}
+
+#graphVisualization circle {
+    stroke: #fff;
+    stroke-width: 1.5px;
+}
+
+/* Estilos para os modais */
+.modal-header {
+    border-bottom-width: 3px;
+}
+
+/* Estilos para os badges de status */
+.badge {
+    font-size: 0.85em;
+    padding: 0.35em 0.65em;
+}
+
+/* Estilos para os botões de ação */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Animações para atualizações de dados */
+@keyframes highlight {
+    0% {
+        background-color: rgba(255, 193, 7, 0.2);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.highlight-row {
+    animation: highlight 2s ease-in-out;
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 768px) {
+    .map-container {
+        height: 200px;
+    }
+    
+    #graphVisualization {
+        height: 200px !important;
+    }
+}

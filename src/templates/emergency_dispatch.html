@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Despacho de Emergências - Combate a Incêndios</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <!-- D3.js para visualização de grafos -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-fire-alt me-2"></i>
+                Sistema de Monitorização de Risco de Incêndio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Início</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/risk/map">Mapa de Risco</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/risk/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/emergency">Gestão de Emergências</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/#about">Sobre</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1>Sistema de Despacho de Emergências</h1>
+        <p class="lead mb-4">Organização, priorização e gestão de chamados de emergência para combate a incêndios florestais com estruturas de dados especializadas.</p>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="fas fa-phone-alt me-2"></i>Novo Chamado de Emergência</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="emergencyForm">
+                            <div class="mb-3">
+                                <label for="localInput" class="form-label">Local</label>
+                                <select class="form-select" id="localInput" required>
+                                    <option value="" selected disabled>Selecione o local</option>
+                                    <option value="Zona Norte">Zona Norte</option>
+                                    <option value="Zona Sul">Zona Sul</option>
+                                    <option value="Mata Alta">Mata Alta</option>
+                                    <option value="Vila Verde">Vila Verde</option>
+                                    <option value="Parque Nacional">Parque Nacional</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="severidadeInput" class="form-label">Severidade (1-5)</label>
+                                <input type="number" class="form-control" id="severidadeInput" min="1" max="5" value="3" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="vegetacaoInput" class="form-label">Tipo de Vegetação</label>
+                                <select class="form-select" id="vegetacaoInput" required>
+                                    <option value="cerrado">Cerrado (peso 1.2)</option>
+                                    <option value="mata_atlantica">Mata Atlântica (peso 1.5)</option>
+                                    <option value="pantanal">Pantanal (peso 2.0)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="climaInput" class="form-label">Condição Climática</label>
+                                <select class="form-select" id="climaInput" required>
+                                    <option value="seco">Seco</option>
+                                    <option value="ventoso">Ventoso</option>
+                                    <option value="umido">Úmido</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-plus-circle me-2"></i>Adicionar Chamado
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Mapa de Rotas</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="routeMap" class="map-container" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list-ol me-2"></i>Fila de Chamados Priorizados (Heap)</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-dark" id="viewQueueBtn">Ver Fila (Queue)</button>
+                            <button type="button" class="btn btn-sm btn-dark" id="viewHeapBtn">Ver Heap</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Local</th>
+                                        <th>Severidade</th>
+                                        <th>Vegetação</th>
+                                        <th>Clima</th>
+                                        <th>Prioridade</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="emergencyQueue">
+                                    <!-- Será preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="queueEmpty" class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Não há chamados na fila no momento.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-truck-moving me-2"></i>Equipes Disponíveis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Base</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamsTable">
+                                    <!-- Será preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Histórico de Ações (Pilha)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="teamSelect" class="form-label">Selecionar Equipe</label>
+                            <select class="form-select" id="teamSelect">
+                                <!-- Será preenchido via JavaScript -->
+                            </select>
+                        </div>
+                        <div class="list-group" id="actionHistory">
+                            <!-- Será preenchido via JavaScript -->
+                            <div class="text-center py-3 text-muted">
+                                <i class="fas fa-history fa-2x mb-2"></i>
+                                <p>Selecione uma equipe para ver o histórico de ações.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Áreas Afetadas (Lista Ligada)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Local</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="affectedAreasTable">
+                                    <!-- Será preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="areasEmpty" class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Não há áreas afetadas registradas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Hierarquia de Regiões (Árvore)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="regionTree" class="region-tree">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i>Mapa de Conexões (Grafo)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="originSelect" class="form-label">Origem</label>
+                                    <select class="form-select" id="originSelect">
+                                        <option value="Base Central">Base Central</option>
+                                        <option value="Zona Norte">Zona Norte</option>
+                                        <option value="Zona Sul">Zona Sul</option>
+                                        <option value="Mata Alta">Mata Alta</option>
+                                        <option value="Vila Verde">Vila Verde</option>
+                                        <option value="Parque Nacional">Parque Nacional</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="destinationSelect" class="form-label">Destino</label>
+                                    <select class="form-select" id="destinationSelect">
+                                        <option value="Zona Norte">Zona Norte</option>
+                                        <option value="Zona Sul">Zona Sul</option>
+                                        <option value="Mata Alta">Mata Alta</option>
+                                        <option value="Vila Verde">Vila Verde</option>
+                                        <option value="Parque Nacional">Parque Nacional</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <button id="calculateRouteBtn" class="btn btn-primary">
+                                    <i class="fas fa-calculator me-2"></i>Calcular Rota
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div id="graphVisualization" style="height: 300px; border: 1px solid #ddd; border-radius: 5px;"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Detalhes da Rota</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-group" id="routeDetails">
+                                            <li class="list-group-item text-center text-muted">
+                                                Calcule uma rota para ver os detalhes
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Atribuição de Equipe -->
+    <div class="modal fade" id="assignTeamModal" tabindex="-1" aria-labelledby="assignTeamModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="assignTeamModalLabel">Atribuir Equipe ao Chamado</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Detalhes do Chamado</h6>
+                            <div id="emergencyDetails">
+                                <!-- Será preenchido via JavaScript -->
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Detalhes da Equipe</h6>
+                            <div id="teamDetails">
+                                <!-- Será preenchido via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6>Rota Otimizada</h6>
+                            <div id="routeDetailsModal">
+                                <!-- Será preenchido via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6>Ações a Realizar</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="Aplicar barreira de contenção" id="action1">
+                                <label class="form-check-label" for="action1">
+                                    Aplicar barreira de contenção
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="Criar aceiro" id="action2">
+                                <label class="form-check-label" for="action2">
+                                    Criar aceiro
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="Combate direto com água" id="action3">
+                                <label class="form-check-label" for="action3">
+                                    Combate direto com água
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="Evacuação da área" id="action4">
+                                <label class="form-check-label" for="action4">
+                                    Evacuação da área
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmAssignment">Confirmar Atribuição</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes da Rota -->
+    <div class="modal fade" id="routeDetailsModal" tabindex="-1" aria-labelledby="routeDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="routeDetailsModalLabel">Detalhes da Rota</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Informações da Rota</h6>
+                            <ul class="list-group" id="routeInfo">
+                                <!-- Será preenchido via JavaScript -->
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Pontos de Passagem</h6>
+                            <ol class="list-group list-group-numbered" id="routeWaypoints">
+                                <!-- Será preenchido via JavaScript -->
+                            </ol>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="routeDetailMap" style="height: 300px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Atualização de Status de Área -->
+    <div class="modal fade" id="updateAreaStatusModal" tabindex="-1" aria-labelledby="updateAreaStatusModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title" id="updateAreaStatusModalLabel">Atualizar Status da Área</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="areaStatusSelect" class="form-label">Novo Status</label>
+                        <select class="form-select" id="areaStatusSelect">
+                            <option value="ativo">Ativo</option>
+                            <option value="controle em andamento">Controle em Andamento</option>
+                            <option value="contido">Contido</option>
+                            <option value="resolvido">Resolvido</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmAreaStatusUpdate">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-3">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Sistema de Monitorização de Risco de Incêndio</h5>
+                    <p>Uma ferramenta para prevenção e monitorização de incêndios florestais.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>&copy; 2025 Sistema de Monitorização de Risco de Incêndio</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/emergency_dispatch.js') }}"></script>
+</body>
+</html>

@@ -108,6 +108,25 @@ fire-risk-app/
 │       └── risk_map.html            # Página do mapa de risco
 └── README.md             # Este arquivo
 ```
+## Layouts
+
+### Tela Inicial
+![image](https://github.com/user-attachments/assets/e1e3f16e-ce3e-4b63-b775-f30f349165fa)
+
+### Mapa de Risco
+![image](https://github.com/user-attachments/assets/51a55133-ac2c-4407-a0a8-342757172c24)
+![image](https://github.com/user-attachments/assets/dcbd1b89-888e-40de-b0f0-e8602403d8d6)
+![image](https://github.com/user-attachments/assets/c958bc5e-f346-40c1-a414-167dd08f0230)
+
+### DashBoard
+![image](https://github.com/user-attachments/assets/bbd83a8b-b014-41a2-b5ca-4528e5dda61a)
+![image](https://github.com/user-attachments/assets/bd3f97ed-4a14-4910-912a-f82920fd7368)
+![image](https://github.com/user-attachments/assets/702534ec-2397-459d-8695-341a7958f95b)
+![image](https://github.com/user-attachments/assets/a93f6ec5-b963-45d7-81f8-18f1b592dbc6)
+
+### Gestao de Emergencias
+![image](https://github.com/user-attachments/assets/cdb49202-ae56-46ba-ae87-d3ea794a6cec)
+![image](https://github.com/user-attachments/assets/dc51b399-7c29-4c3d-95fd-bc5b50c80cb2)
 
 ## Uso do Sistema
 
